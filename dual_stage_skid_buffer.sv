@@ -7,31 +7,30 @@ module dual_stage_skid_buffer #(
   input  logic [DATA_W-1:0] in_data,
   input  logic            i_valid,
   output logic           o_ready,
-
   //downstream Interface
   input  logic              i_ready,
   output logic [DATA_W-1:0] o_data,
   output logic              o_valid
 );
   logic [DATA_W-1:0] skid_data;
-  logic skid_valid, pipe_accept, next_ready;
-  assign next_ready = ~o_valid | i_ready;
-  assign pipe_accept = (i_valid | skid_valid) & next_ready;
-  always_ff @(posedge clk or negedge rst_n) begin
+  logic skid_valid, pipe_accept, reg_ready;
+  assign o_ready = ~o_valid | reg_ready;
+  assign pipe_accept = (i_valid & (~o_valid | i_ready)) | (skid_valid & i_ready);
+  always_ff @(posedge i_clk or negedge rst_n) begin
     if (!rst_n) begin
       o_valid <= '0;
       skid_valid <= '0;
       skid_data  <= '0;
       o_data  <= '0;
-      o_ready <= '0;
+      reg_ready <= '0;
     end
     else begin
-      o_ready <= next_ready;
+      reg_ready <= i_ready;
       if (pipe_accept)begin
         o_valid <= 1'b1;
         if (skid_valid) begin
           o_data <= skid_data;
-          skdi_valid <= '0;
+          skid_valid <= '0;
         end
         else begin
           o_data <= i_data;
@@ -42,8 +41,8 @@ module dual_stage_skid_buffer #(
           o_valid <= '0;
         end
         else if (o_valid) begin
-          skid_valid <= 1'b1;
-          skid_data <= i_data;
+          skid_valid <= skid_valid | i_valid;
+          skid_data <= skid_valid ? skid_data : in_data;
         end
       end
     end
