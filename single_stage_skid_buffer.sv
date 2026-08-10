@@ -31,7 +31,7 @@ module single_stage_skid_buffer #(
         skid_valid <= ~i_ready;
       end
       else begin
-        if (i_valid & ~i_ready) begin
+        if (i_valid & o_ready & ~i_ready) begin
           skid_valid <= 1'b1;
           skid_data <= in_data;
         end
